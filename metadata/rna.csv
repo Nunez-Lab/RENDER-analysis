@@ -1,0 +1,15 @@
+sample,cell_line,condition
+DX5N1_S8,jurkat,non_targeting
+DX5N2_S21,jurkat,non_targeting
+DX5P1_S10,jurkat,pooled
+DX5P2_S23,jurkat,pooled
+DX5S1_S9,jurkat,single
+DX5S2_S22,jurkat,single
+DX5U1_S7,jurkat,untreated
+DX5U2_S20,jurkat,untreated
+DXCE1_S13,hek293t,clta
+DXCE2_S26,hek293t,clta
+DXCN1_S12,hek293t,non_targeting
+DXCN2_S25,hek293t,non_targeting
+DXCU1_S11,hek293t,untreated
+DXCU2_S24,hek293t,untreated

@@ -1,33 +1,73 @@
 ################################################################################
-# Imports
+# %% Imports
 
 library(DESeq2)
 
 ################################################################################
-# Command-line arguments
+# %% Command-line arguments
 
 args = commandArgs(trailingOnly = TRUE)
-CTS_PATH = args[1]
-OUTPUT_PATH = args[2]
+METADATA_FILE = args[1]
+COMPARISONS_FILE = args[2]
+COUNTS_PATH = args[3]
+OUTPUT_PATH = args[4]
 
 ################################################################################
-# Main script
+# %% Main script
 
-# TODO: Hard-coded samples of interest
-cols = c("DX5N1_S8", "DX5N2_S21", "DX5S1_S9", "DX5S2_S22")
-colData = data.frame(id = cols, condition = c("non_targeting", "non_targeting", "single", "single"))
+metadata = read.csv(METADATA_FILE, header=TRUE)
+comparisons = read.csv(COMPARISONS_FILE, header=TRUE)
 
-# Load read count matrix
-cts = as.matrix(read.csv(CTS_PATH, sep="\t", row.names="target_id"))[, cols]
+for (i in 1:nrow(comparisons)) {
+    # Set up DESeq2 input data
 
-# Run DESeq2
-dds = DESeqDataSetFromMatrix(
-    countData = cts,
-    colData = colData,
-    design = ~ condition
-)
-dds = DESeq(dds)
-res = results(dds)
+    row = comparisons[i,]
+    control = metadata[
+        (metadata$cell_line == row$cell_line) &
+        (metadata$condition == row$control),
+    ]
+    treatment = metadata[
+        (metadata$cell_line == row$cell_line) &
+        (metadata$condition == row$treatment),
+    ]
 
-# Save results to a TSV
-write.csv(res, OUTPUT_PATH)
+    cols = c(control$sample, treatment$sample)
+    conditions = c(control$condition, treatment$condition)
+
+    colData = data.frame(
+        id = cols,
+        condition = conditions
+    )
+
+    counts = as.matrix(
+        read.csv(
+            COUNTS_PATH,
+            sep="\t",
+            row.names="target_id"
+        )
+    )[, cols]
+
+    # Run DESeq2
+
+    dds = DESeqDataSetFromMatrix(
+        countData = counts,
+        colData = colData,
+        design = ~ condition
+    )
+    dds = DESeq(dds)
+    res = results(dds)
+
+    # Write results to TSV
+
+    filename = paste0(
+        paste(row$cell_line, row$control, row$treatment, sep="-"),
+        ".tsv"
+    )
+
+    write.table(
+        res,
+        file.path(OUTPUT_PATH, filename),
+        quote=FALSE,
+        sep="\t"
+    )
+}
