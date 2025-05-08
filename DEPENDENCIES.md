@@ -7,6 +7,12 @@
 
 # R dependencies
 
+# CRAN
+
+- tidyverse: https://cran.r-project.org/web/packages/tidyverse/index.html
+
+## BioConductor
+
 - biomaRt: https://bioconductor.org/packages/release/bioc/html/biomaRt.html
 - tximport: https://bioconductor.org/packages/release/bioc/html/tximport.html
 - DESeq2: https://bioconductor.org/packages/release/bioc/html/DESeq2.html

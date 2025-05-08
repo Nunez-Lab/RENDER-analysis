@@ -28,15 +28,7 @@ BISMARK_PARALLEL=10
 
 RNA_INPUT_DIR="raw_data/${RNA_DIR}"
 RNA_OUTPUT_DIR="output/${RNA_DIR}"
-
-# %% Get list of RNA-seq sample names
-
-RNA_SAMPLE_NAMES=()
-
-for forward in $RNA_INPUT_DIR/*_R1_001.fastq.gz; do
-    name=$(basename ${forward} _R1_001.fastq.gz)
-    RNA_SAMPLE_NAMES+=(name)
-done
+RNA_SAMPLE_NAMES=( $(cat metadata/rna.csv | cut -d ',' -f1 | tail -n +2) )
 
 # %% Run FastQC to perform sequencing quality control checks
 
@@ -101,6 +93,8 @@ done
 
 # %% Aggregate transcript abundances into gene counts with tximport
 
+mkdir -p $RNA_OUTPUT_DIR/aggregated-reads
+
 echo "Running tximport..."
 Rscript \
     scripts/aggregate_transcripts.r \
@@ -118,7 +112,7 @@ Rscript \
     scripts/differential_gene_expression.r \
     metadata/rna.csv \
     metadata/comparisons.csv \
-    $RNA_OUTPUT_DIR/aggregated-reads/counts.tsv \
+    $RNA_OUTPUT_DIR/aggregated-reads/counts.csv \
     $RNA_OUTPUT_DIR/deseq2
 
 ################################################################################
@@ -126,15 +120,7 @@ Rscript \
 
 EM_INPUT_DIR="raw_data/${EM_DIR}"
 EM_OUTPUT_DIR="output/${EM_DIR}"
-
-# %% Get list of EM-seq sample names
-
-EM_SAMPLE_NAMES=()
-
-for forward in $EM_INPUT_DIR/*_R1_001.fastq.gz; do
-    name=$(basename ${forward} _R1_001.fastq.gz)
-    EM_SAMPLE_NAMES+=(name)
-done
+EM_SAMPLE_NAMES=( $(cat metadata/em.csv | cut -d ',' -f1 | tail -n +2) )
 
 # %% Run FastQC on EMseq
 
@@ -242,13 +228,13 @@ for name in "${EM_SAMPLE_NAMES[@]}"; do
         --project scripts/ \
         scripts/bismark_to_dss.py \
         $EM_OUTPUT_DIR/methylation-bedGraph/${name}_OT.txt.gz.bismark.cov.gz \
-        $EM_OUTPUT_DIR/methylation-dss-separate/${name}_OT.txt
+        $EM_OUTPUT_DIR/methylation-dss-separate/${name}_OT.tsv
 
     uv run \
         --project scripts/ \
         scripts/bismark_to_dss.py \
         $EM_OUTPUT_DIR/methylation-bedGraph/${name}_OB.txt.gz.bismark.cov.gz \
-        $EM_OUTPUT_DIR/methylation-dss-separate/${name}_OB.txt
+        $EM_OUTPUT_DIR/methylation-dss-separate/${name}_OB.tsv
 done
 
 # %% Aggregate original top and bottom strands
@@ -260,9 +246,9 @@ for name in "${EM_SAMPLE_NAMES[@]}"; do
     uv run \
         --project scripts/ \
         scripts/combine_dss.py \
-        $EM_OUTPUT_DIR/methylation-dss-separate/${name}_OT.txt \
-        $EM_OUTPUT_DIR/methylation-dss-separate/${name}_OB.txt \
-        $EM_OUTPUT_DIR/methylation-dss-combined/${name}.txt
+        $EM_OUTPUT_DIR/methylation-dss-separate/${name}_OT.tsv \
+        $EM_OUTPUT_DIR/methylation-dss-separate/${name}_OB.tsv \
+        $EM_OUTPUT_DIR/methylation-dss-combined/${name}.tsv
 done
 
 # %% Filter low read counts
@@ -290,6 +276,19 @@ uv run \
     $EM_OUTPUT_DIR/methylation-dss-combined-filtered \
     > $EM_OUTPUT_DIR/average-methylation-info/info.tsv
 
+# %% Perform differential methylation test with DSS
+
+mkdir -p $EM_OUTPUT_DIR/dss
+
+echo "Running DSS..."
+
+Rscript \
+    scripts/dss.r \
+    metadata/rna.csv \
+    metadata/comparisons.csv \
+    $RNA_OUTPUT_DIR/aggregated-reads/counts.csv \
+    $RNA_OUTPUT_DIR/deseq2
+
 ################################################################################
 ## %% Analysis
 
@@ -300,5 +299,7 @@ mkdir -p output/analysis
 uv run \
     --project scripts/ \
     scripts/analyze.py \
+    metadata/ \
+    $RNA_OUTPUT_DIR/aggregated-reads/counts.csv \
     $RNA_OUTPUT_DIR/deseq2 \
     output/analysis

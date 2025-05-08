@@ -3,6 +3,7 @@
 
 library(org.Hs.eg.db)
 library(biomaRt)
+library(tximport)
 
 ################################################################################
 # %% Command-line arguments
@@ -10,7 +11,7 @@ library(biomaRt)
 args = commandArgs(trailingOnly = TRUE)
 METADATA_FILE = args[1]
 KALLISTO_QUANT_DIR = args[2]
-OUTPUT_DIR = args[3]
+OUTPUT_PATH = args[3]
 
 ################################################################################
 # %% Main script
@@ -50,4 +51,4 @@ txi = tximport(
     tx2gene = tx2gene
 )
 
-write.csv(txi$counts, OUTPUT_PATH)
+write.csv(round(txi$counts), OUTPUT_PATH)

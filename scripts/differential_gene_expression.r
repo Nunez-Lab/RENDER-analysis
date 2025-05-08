@@ -15,8 +15,15 @@ OUTPUT_PATH = args[4]
 ################################################################################
 # %% Main script
 
-metadata = read.csv(METADATA_FILE, header=TRUE)
-comparisons = read.csv(COMPARISONS_FILE, header=TRUE)
+metadata = read.csv(
+    METADATA_FILE,
+    header=TRUE,
+)
+
+comparisons = read.csv(
+    COMPARISONS_FILE,
+    header=TRUE,
+)
 
 for (i in 1:nrow(comparisons)) {
     # Set up DESeq2 input data
@@ -36,15 +43,11 @@ for (i in 1:nrow(comparisons)) {
 
     colData = data.frame(
         id = cols,
-        condition = conditions
+        condition = as.factor(conditions)
     )
 
     counts = as.matrix(
-        read.csv(
-            COUNTS_PATH,
-            sep="\t",
-            row.names="target_id"
-        )
+        read.csv(COUNTS_PATH, row.names=1)
     )[, cols]
 
     # Run DESeq2
@@ -57,17 +60,15 @@ for (i in 1:nrow(comparisons)) {
     dds = DESeq(dds)
     res = results(dds)
 
-    # Write results to TSV
+    # Write results to CSV
 
     filename = paste0(
         paste(row$cell_line, row$control, row$treatment, sep="-"),
-        ".tsv"
+        ".csv"
     )
 
     write.table(
         res,
         file.path(OUTPUT_PATH, filename),
-        quote=FALSE,
-        sep="\t"
     )
 }

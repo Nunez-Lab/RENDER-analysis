@@ -1,75 +1,41 @@
-import polars as pl
+################################################################################
+# %% Imports
+
 import matplotlib.pyplot as plt
+import polars as pl
 
-OUTPUT_DIR = "output/RNA_seq_Replicate_2"
+import glob
+import os
+import sys
 
-def preprocess(df):
-    return df.filter(pl.col("target_id").str.starts_with("NM_"))
+################################################################################
+# %% Command-line arguments
 
-def rpk(df):
-    return df.with_columns(
-        rpk=pl.col("est_counts") / (pl.col("eff_length") / 1000)
-    )
+METADATA_DIR = sys.argv[1]
+RNA_COUNTS_PATH = sys.argv[2]
+RNA_DGE_DIR = sys.argv[3]
+OUTPUT_DIR = sys.argv[4]
 
-def combine(df1, df2, suffix):
-    df1 = rpk(df1)
-    df2 = rpk(df2)
-    return df1.join(
-        df2,
-        on="target_id",
-        suffix="2",
-        validate="1:1"
-    ).with_columns(
-        total_rpk=pl.col("rpk") + pl.col("rpk2"),
-    ).with_columns(
-        tpm1=pl.col("rpk") / (pl.col("rpk").sum() / 1_000_000),
-        tpm2=pl.col("rpk2") / (pl.col("rpk2").sum() / 1_000_000),
-        total_tpm=pl.col("total_rpk") / (pl.col("total_rpk").sum() / 1_000_000),
-    ).select(
-        pl.col("target_id"),
-        pl.col("total_tpm").alias("tpm_" + suffix),
-        pl.col("total_tpm").log(base=2).alias("log_tpm_" + suffix),
-        pl.col("tpm1").alias("tpm_" + suffix + "1"),
-        pl.col("tpm1").log(base=2).alias("log_tpm_" + suffix + "1"),
-        pl.col("tpm2").alias("tpm_" + suffix + "2"),
-        pl.col("tpm2").log(base=2).alias("log_tpm_" + suffix + "2"),
-    )
+################################################################################
+# %% RNA-seq count plots
 
-# Load in the abundance data table (separated by tabs, not commas)
-n1 = preprocess(pl.read_csv(f"{OUTPUT_DIR}/quant/DX5N1_S8/abundance.tsv", separator="\t"))
-n2 = preprocess(pl.read_csv(f"{OUTPUT_DIR}/quant/DX5N2_S21/abundance.tsv", separator="\t"))
-p1 = preprocess(pl.read_csv(f"{OUTPUT_DIR}/quant/DX5P1_S10/abundance.tsv", separator="\t"))
-p2 = preprocess(pl.read_csv(f"{OUTPUT_DIR}/quant/DX5P2_S23/abundance.tsv", separator="\t"))
+# %% Load data
 
-n = combine(n1, n2, suffix="n")
-p = combine(p1, p2, suffix="p")
+METADATA_DIR = "metadata"
+RNA_COUNTS_PATH = "output/RNAseq/aggregated-reads/counts.csv"
 
-CD55_IDS = [
-    "NM_000574.5",
-    "NM_001114752.3",
-    "NM_001300902.2",
-    "NM_001300903.2",
-    "NM_001300904.2",
-]
+cd55_prefix = "ENSG00000196352"
+counts = pl.read_csv(RNA_COUNTS_PATH)
 
-data = n.join(p, on="target_id").with_columns(
-    color=pl.when(pl.col("target_id").is_in(CD55_IDS)).then(pl.lit("red")).otherwise(pl.lit("gray"))
-).filter(pl.col("tpm_n") > 0.05)
+# %% Create RNA-seq count plots
 
-fig, ax = plt.subplots(1, 1, figsize=(4, 4))
+rmeta = pl.read_csv(os.path.join(METADATA_DIR, "rna.csv"))
 
-for (c,), g in data.group_by("color"):
-    if c == "red":
-        alpha = 1
-        zorder = 10
-    else:
-        alpha = 0.1
-        zorder = 5
-    ax.scatter(g["log_tpm_n1"], g["log_tpm_n2"], c=c, alpha=alpha, zorder=zorder)
+for (cell_line, condition), g in rmeta.group_by("cell_line", "condition"):
+    assert len(g) == 2, "expected 2 replicates"
 
-ax.set_xlim(-15, 15)
-ax.set_ylim(-15, 15)
+    rep1 = g.row(by_predicate=pl.col("replicate") == 1, named=True)
+    rep2 = g.row(by_predicate=pl.col("replicate") == 2, named=True)
 
-fig.tight_layout()
+    print(rep1)
 
-fig.savefig(OUTPUT_DIR + "/plot.png")
