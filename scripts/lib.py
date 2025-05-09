@@ -3,19 +3,43 @@ import os
 import matplotlib
 import matplotlib.figure
 import matplotlib.pyplot as plt
+import numpy as np
 import polars as pl
 
 
-def save(self, filename, *args, **kwargs):
-    os.makedirs(
-        os.path.dirname(filename),
-        exist_ok=True,
-    )
-    self.savefig(filename, *args, **kwargs)
+def save(self, filename, exts=None, *args, **kwargs):
+    dirname = os.path.dirname(filename)
+    basename = os.path.basename(filename)
+
+    os.makedirs(dirname, exist_ok=True)
+
+    if exts is not None:
+        for ext in exts:
+            new_dirname = os.path.join(dirname, ext)
+            os.makedirs(new_dirname, exist_ok=True)
+            self.savefig(
+                os.path.join(new_dirname, basename + "." + ext),
+                *args,
+                **kwargs,
+            )
+    else:
+        self.savefig(filename, *args, **kwargs)
+
     plt.close(self)
 
 
 matplotlib.figure.Figure.save = save
+
+
+def save_organized(self, output_dir, tag, base, sep="-", svg=True):
+    path = os.path.join(output_dir, tag, tag + sep + base)
+    if svg:
+        self.save(path, exts=["png", "svg"])
+    else:
+        self.save(path, exts=["png"], dpi=300)
+
+
+matplotlib.figure.Figure.save_organized = save_organized
 
 
 def rna_count_plot(
@@ -25,12 +49,20 @@ def rna_count_plot(
     *,
     title,
     highlight=pl.lit(False),
+    gene_name_feature="external_gene_name",
+    xlabel=None,
+    ylabel=None,
 ):
+    xlabel = x_feature if xlabel is None else xlabel
+    ylabel = y_feature if ylabel is None else ylabel
+
     fig, ax = plt.subplots(1, 1, figsize=(4, 4))
+
     df = df.with_columns(
         (1 + df[x_feature]).log(base=2),
         (1 + df[y_feature]).log(base=2),
     )
+
     ax.scatter(
         df.filter(~highlight)[x_feature],
         df.filter(~highlight)[y_feature],
@@ -39,17 +71,47 @@ def rna_count_plot(
         alpha=0.5,
         s=5,
     )
+
     ax.scatter(
         df.filter(highlight)[x_feature],
         df.filter(highlight)[y_feature],
-        c="red",
+        c=PURPLE,
         zorder=10,
         alpha=1,
         s=10,
     )
-    ax.set_xlabel(x_feature)
-    ax.set_ylabel(y_feature)
+
+    if gene_name_feature is not None:
+        for row in df.filter(highlight).iter_rows(named=True):
+            ax.annotate(
+                text=row[gene_name_feature],
+                xy=(row[x_feature], row[y_feature]),
+                zorder=15,
+                xytext=(3, 3),
+                textcoords="offset pixels",
+                ha="left",
+                va="top",
+                color=PURPLE,
+            )
+
+    ax.set_xlabel(
+        r"$\bf{" + xlabel.replace("_", r"\_") + "}$\n" + r"$\log_{2}(1 + $TPM$)$"
+    )
+
+    ax.set_ylabel(
+        r"$\bf{" + ylabel.replace("_", r"\_") + "}$\n" + r"$\log_{2}(1 + $TPM$)$"
+    )
+
     ax.set_title(title)
+    ax.spines[["top", "right"]].set_visible(False)
+
+    ax.set_xticks(np.arange(0, 16.1, 2))
+    ax.set_yticks(np.arange(0, 16.1, 2))
+    ax.set_xlim(0, 16)
+    ax.set_ylim(0, 16)
+
+    fig.tight_layout()
+
     return fig, ax
 
 
@@ -57,8 +119,11 @@ def volcano_plot(
     df,
     *,
     title,
+    treatment_name,
+    control_name,
     highlight=pl.lit(False),
     threshold=None,
+    show_threshold_line=False,
     gene_name_feature=None,
 ):
     if gene_name_feature is not None:
@@ -73,6 +138,8 @@ def volcano_plot(
         **{
             y: -pl.col("padj").log(base=10),
         }
+    ).filter(
+        pl.col("baseMean") > 10,
     )
 
     ax.scatter(
@@ -87,29 +154,94 @@ def volcano_plot(
     ax.scatter(
         df.filter(highlight)[x],
         df.filter(highlight)[y],
-        c="red",
+        c=PURPLE,
         zorder=10,
         alpha=1,
         s=10,
     )
 
     if threshold is not None:
-        ax.axhline(
-            y=threshold,
-            ls="--",
-            c="0.7",
-            lw=1,
-        )
+        if show_threshold_line:
+            ax.axhline(
+                y=threshold,
+                ls="--",
+                c="0.7",
+                lw=1,
+            )
 
         if gene_name_feature is not None:
-            for row in df.filter(pl.col(y) > threshold).iter_rows(named=True):
+            for row in df.filter(
+                pl.col(y) > threshold,
+                highlight,
+            ).iter_rows(named=True):
                 ax.annotate(
                     text=row[gene_name_feature],
                     xy=(row[x], row[y]),
+                    zorder=15,
+                    xytext=(3, 3),
+                    textcoords="offset pixels",
+                    ha="left",
+                    va="top",
+                    color=PURPLE,
                 )
+
+            for row in df.filter(
+                pl.col(y) > threshold,
+                ~highlight,
+            ).iter_rows(named=True):
+                ax.annotate(
+                    text=row[gene_name_feature],
+                    xy=(row[x], row[y]),
+                    zorder=15,
+                    xytext=(3, 3),
+                    textcoords="offset pixels",
+                    ha="left",
+                    va="top",
+                    color="0.5",
+                )
+
+    ax.set_xlabel(r"$\log_{2}($fold change$)$")
+    ax.set_ylabel(r"$-\log_{10}($adjusted $p$-value$)$")
 
     xmax = df[x].abs().max() + 1
     ax.set_xlim(-xmax, xmax)
+
+    ymax = df[y].max()
+    if ymax < 30:
+        ax.set_ylim(0, 30)
+        ax.set_yticks(np.arange(0, 30.1, 5))
+    else:
+        ymax = max(150, ymax)
+        ax.set_ylim(0, ymax)
+        ax.set_yticks(np.arange(0, ymax + 0.1, 30))
+
+    ax.text(
+        0.03,
+        1,
+        f"Lower in\n{treatment_name}",
+        color=PURPLE,
+        fontweight="bold",
+        ha="left",
+        va="top",
+        transform=ax.transAxes,
+    )
+
+    ax.text(
+        1,
+        1,
+        f"Lower in\n{control_name}",
+        color=BLUE,
+        fontweight="bold",
+        ha="right",
+        va="top",
+        transform=ax.transAxes,
+    )
+
+    ax.axvline(x=0, ls="--", lw=1, color="0.7")
+
+    ax.spines[["top", "right"]].set_visible(False)
+
+    fig.tight_layout()
 
     return fig, ax
 
@@ -120,7 +252,7 @@ def load_dss_results(path):
         .with_columns(
             mu_control=pl.col("mu1"),
             mu_treatment=pl.col("mu2"),
-            effect_size=pl.col("diff"),
+            effect_size=pl.col("diff").neg(),  # TODO swap order in DSS!
             score=pl.when(pl.col("mu1") > pl.col("mu2"))
             .then(pl.col("fdr").log10())
             .otherwise(-pl.col("fdr").log10()),
@@ -375,6 +507,15 @@ def correlation_plot(
 ):
     fig, ax = plt.subplots(1, 1, figsize=(4, 4))
 
+    df = df.with_columns(
+        **{
+            s2: df[s2].clip(
+                lower_bound=-250,
+                upper_bound=250,
+            )
+        }
+    )
+
     ax.scatter(
         df.filter(~highlight)[s1],
         df.filter(~highlight)[s2],
@@ -391,21 +532,40 @@ def correlation_plot(
         zorder=10,
         alpha=1,
         s=10,
-        marker="^",
     )
 
     for row in df.filter(highlight).iter_rows(named=True):
         ax.annotate(
             text=row[gene_name_feature],
             xy=(row[s1], row[s2]),
-            xytext=(-10, 10),
+            xytext=(3, 3),
             textcoords="offset pixels",
-            ha="right",
+            ha="left",
+            va="top",
             color=PURPLE,
+            zorder=15,
         )
 
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
+
+    xmax = df.filter(pl.col(s1).is_finite())[s1].abs().max()
+    if xmax < 30:
+        xmax = 30
+        ax.set_xlim(-xmax, xmax)
+        ax.set_xticks(np.arange(-xmax, xmax + 0.1, 10))
+    else:
+        xmax = max(150, xmax)
+        ax.set_xlim(-xmax, xmax)
+        ax.set_yticks(np.arange(-xmax, xmax + 0.1, 30))
+
+    ymax = max(250, df[s2].abs().max())
+    ax.set_ylim(-ymax, ymax)
+    ax.set_yticks(np.arange(-ymax, ymax + 0.1, 50))
+
+    ax.axvline(x=0, lw=1, ls="--", color="0.8")
+    ax.axhline(y=0, lw=1, ls="--", color="0.8")
+    ax.spines[["top", "right"]].set_visible(False)
 
     fig.tight_layout()
 

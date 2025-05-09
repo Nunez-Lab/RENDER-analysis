@@ -28,7 +28,8 @@ tab = getBM(
           "chromosome_name",
           "start_position",
           "end_position",
-          "external_gene_name"
+          "external_gene_name",
+          "gene_biotype"
     ),
     mart = mart
 )

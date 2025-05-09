@@ -7,13 +7,25 @@ library(DESeq2)
 # %% Command-line arguments
 
 args = commandArgs(trailingOnly = TRUE)
-METADATA_FILE = args[1]
-COMPARISONS_FILE = args[2]
-COUNTS_PATH = args[3]
-OUTPUT_PATH = args[4]
+GENE_METADATA_FILE = args[1]
+METADATA_FILE = args[2]
+COMPARISONS_FILE = args[3]
+COUNTS_PATH = args[4]
+OUTPUT_PATH = args[5]
 
 ################################################################################
 # %% Main script
+
+gene_metadata = read.table(
+    GENE_METADATA_FILE,
+    header=TRUE,
+    sep="\t",
+)
+
+protein_coding = gene_metadata[
+    gene_metadata$gene_biotype == "protein_coding",
+    "ensembl_gene_id_version"
+]
 
 metadata = read.csv(
     METADATA_FILE,
@@ -24,6 +36,19 @@ comparisons = read.csv(
     COMPARISONS_FILE,
     header=TRUE,
 )
+
+counts = round(
+    read.csv(
+        COUNTS_PATH,
+        row.names=1
+    )
+)
+
+counts = counts[
+    rownames(counts) %in% protein_coding,
+]
+
+# %%
 
 for (i in 1:nrow(comparisons)) {
     # Set up DESeq2 input data
@@ -46,19 +71,20 @@ for (i in 1:nrow(comparisons)) {
         condition = as.factor(conditions)
     )
 
-    counts = as.matrix(
-        round(read.csv(COUNTS_PATH, row.names=1))
-    )[, cols]
-
     # Run DESeq2
 
     dds = DESeqDataSetFromMatrix(
-        countData = counts,
+        countData = counts[, cols],
         colData = colData,
         design = ~ condition
     )
+
     dds = DESeq(dds)
-    res = results(dds)
+
+    res = results(
+        dds,
+        contrast=c("condition", row$treatment, row$control)
+    )
 
     # Write results to CSV
 

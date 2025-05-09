@@ -56,6 +56,7 @@ for methyl_path in sorted(glob.glob(f"{DSS_DIR}/*.csv")):
             "pos",
             "pval",
             "fdr",
+            "diff",
         )
         .sort(by="pos")
         .join_asof(
@@ -72,6 +73,7 @@ for methyl_path in sorted(glob.glob(f"{DSS_DIR}/*.csv")):
         .agg(
             min_pval=pl.col("pval").min(),
             min_fdr=pl.col("fdr").min(),
+            mean_diff=pl.col("diff").mean(),
         )
         .collect()
         .write_csv(

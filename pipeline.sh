@@ -120,6 +120,7 @@ echo "Running DESeq2..."
 
 Rscript \
     scripts/differential_gene_expression.r \
+    output/gene-metadata/gene-metadata.tsv \
     metadata/rna.csv \
     metadata/comparisons.csv \
     $RNA_OUTPUT_DIR/aggregated-reads/counts.csv \
