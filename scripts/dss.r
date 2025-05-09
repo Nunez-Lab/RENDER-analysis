@@ -14,13 +14,6 @@ COMPARISONS_FILE = args[2]
 METHYLATION_DIR = args[3]
 OUTPUT_PATH = args[4]
 
-# %%
-
-METADATA_FILE = "metadata/em.csv"
-COMPARISONS_FILE = "metadata/comparisons.csv"
-METHYLATION_DIR = "output/EMseq/methylation-dss-combined-filtered"
-OUTPUT_PATH = "output/EMseq/dss"
-
 # %% Load metadata
 
 metadata = read.csv(

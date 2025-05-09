@@ -22,6 +22,16 @@ CORES=56
 BISMARK_PARALLEL=10
 
 ################################################################################
+# %% Get gene metadata for downstream analysis
+
+mkdir -p output/gene-metadata
+
+echo "Getting gene metadata..."
+Rscript \
+    scripts/get_gene_metadata.r \
+    output/gene-metadata/
+
+################################################################################
 # %% RNA-seq pre-processing
 
 # %% Set input/output directory variables
@@ -100,7 +110,7 @@ Rscript \
     scripts/aggregate_transcripts.r \
     metadata/rna.csv \
     $RNA_OUTPUT_DIR/quant/ \
-    $RNA_OUTPUT_DIR/aggregated-reads/counts.csv
+    $RNA_OUTPUT_DIR/aggregated-reads/
 
 # %% Perform differential gene expression test with DESeq2
 
@@ -284,10 +294,23 @@ echo "Running DSS..."
 
 Rscript \
     scripts/dss.r \
-    metadata/rna.csv \
+    metadata/em.csv \
     metadata/comparisons.csv \
-    $RNA_OUTPUT_DIR/aggregated-reads/counts.csv \
-    $RNA_OUTPUT_DIR/deseq2
+    $EM_OUTPUT_DIR/methylation-dss-combined-filtered \
+    $EM_OUTPUT_DIR/dss
+
+# %% Aggregate loci to genes
+
+mkdir -p $EM_OUTPUT_DIR/dss-aggregated
+
+echo "Aggregating DSS output..."
+
+uv run \
+    --project scripts/ \
+    scripts/aggregate_dss.py \
+    output/gene-metadata/gene-metadata.tsv \
+    $EM_OUTPUT_DIR/dss \
+    $EM_OUTPUT_DIR/dss-aggregated
 
 ################################################################################
 ## %% Analysis
@@ -300,6 +323,10 @@ uv run \
     --project scripts/ \
     scripts/analyze.py \
     metadata/ \
-    $RNA_OUTPUT_DIR/aggregated-reads/counts.csv \
+    output/gene-metadata/ \
+    $RNA_OUTPUT_DIR/aggregated-reads/abundance.csv \
     $RNA_OUTPUT_DIR/deseq2 \
+    $EM_OUTPUT_DIR/average-methylation-info/info.tsv \
+    $EM_OUTPUT_DIR/dss \
+    $EM_OUTPUT_DIR/dss-aggregated \
     output/analysis

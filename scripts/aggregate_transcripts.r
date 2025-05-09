@@ -1,7 +1,6 @@
 ################################################################################
 # %% Imports
 
-library(org.Hs.eg.db)
 library(biomaRt)
 library(tximport)
 
@@ -11,7 +10,7 @@ library(tximport)
 args = commandArgs(trailingOnly = TRUE)
 METADATA_FILE = args[1]
 KALLISTO_QUANT_DIR = args[2]
-OUTPUT_PATH = args[3]
+OUTPUT_DIR = args[3]
 
 ################################################################################
 # %% Main script
@@ -33,14 +32,14 @@ names(files) = metadata$sample
 mart = useEnsembl(
     biomart = "ensembl",
     dataset = "hsapiens_gene_ensembl",
-    version = 114,
+    version = 114
 )
 
 tx2gene = getBM(
     attributes =
         c("ensembl_transcript_id_version",
           "ensembl_gene_id_version"),
-    mart = mart,
+    mart = mart
 )
 
 # %% Aggregate abundances and save count file
@@ -51,4 +50,5 @@ txi = tximport(
     tx2gene = tx2gene
 )
 
-write.csv(round(txi$counts), OUTPUT_PATH)
+write.csv(txi$counts, file.path(OUTPUT_DIR, "counts.csv"))
+write.csv(txi$abundance, file.path(OUTPUT_DIR, "abundance.csv"))

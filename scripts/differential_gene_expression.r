@@ -47,7 +47,7 @@ for (i in 1:nrow(comparisons)) {
     )
 
     counts = as.matrix(
-        read.csv(COUNTS_PATH, row.names=1)
+        round(read.csv(COUNTS_PATH, row.names=1))
     )[, cols]
 
     # Run DESeq2
@@ -67,7 +67,7 @@ for (i in 1:nrow(comparisons)) {
         ".csv"
     )
 
-    write.table(
+    write.csv(
         res,
         file.path(OUTPUT_PATH, filename),
     )
