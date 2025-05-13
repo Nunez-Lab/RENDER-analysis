@@ -2,12 +2,9 @@
 # %% Imports
 
 import glob
-import importlib
 import os
 import sys
 
-import matplotlib.ticker as mtick
-import numpy as np
 import polars as pl
 
 ################################################################################
@@ -20,12 +17,13 @@ OUTPUT_DIR = sys.argv[3]
 ################################################################################
 # %% Main script
 
-GENE_METADATA_PATH = "output/gene-metadata/gene-metadata.tsv"
-DSS_DIR = "output/EMseq/dss"
-OUTPUT_DIR = "output/EMseq/dss-aggregated"
+# GENE_METADATA_PATH = "output/gene-metadata/gene-metadata.tsv"
+# DSS_DIR = "output/EMseq/dss"
+# OUTPUT_DIR = "output/EMseq/dss-aggregated"
 
 gene_metadata = (
     pl.scan_csv(GENE_METADATA_PATH, separator="\t")
+    .filter(pl.col("gene_biotype") == "protein_coding")
     .with_columns(
         promoter_start=pl.col("start_position") - 500,
         promoter_end=pl.col("end_position") + 500,

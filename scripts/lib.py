@@ -3,6 +3,7 @@ import os
 import matplotlib
 import matplotlib.figure
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mtick
 import numpy as np
 import polars as pl
 
@@ -250,12 +251,10 @@ def load_dss_results(path):
     return (
         pl.read_csv(path)
         .with_columns(
-            mu_control=pl.col("mu1"),
-            mu_treatment=pl.col("mu2"),
-            effect_size=pl.col("diff").neg(),  # TODO swap order in DSS!
-            score=pl.when(pl.col("mu1") > pl.col("mu2"))
-            .then(pl.col("fdr").log10())
-            .otherwise(-pl.col("fdr").log10()),
+            mu_treatment=pl.col("mu1"),
+            mu_control=pl.col("mu2"),
+            effect_size=pl.col("diff"),
+            score=pl.col("fdr").log10().neg() * pl.col("diff").sign(),
             chr=pl.when(pl.col("chr") == "phage_lambda")
             .then(pl.col("chr"))
             .when(pl.col("chr") == "plasmid_puc19c")
@@ -482,6 +481,7 @@ def gene_info(metadata, data, symbol):
     )
 
     return {
+        "tss": row["start_position"],
         "tss_index": data.filter(expr)["index"].min(),
         "surround": (
             (pl.col("chr") == chr)
@@ -566,6 +566,111 @@ def correlation_plot(
     ax.axvline(x=0, lw=1, ls="--", color="0.8")
     ax.axhline(y=0, lw=1, ls="--", color="0.8")
     ax.spines[["top", "right"]].set_visible(False)
+
+    fig.tight_layout()
+
+    return fig, ax
+
+
+def methylation_plot(
+    df,
+    *,
+    tracks,
+    targeted_gene,
+    tss,
+    surround,
+    figsize=(10, 3),
+):
+    fig, ax = plt.subplots(
+        2,
+        1,
+        figsize=figsize,
+        sharex=True,
+    )
+
+    conditions = ["control", "treatment"]
+    colors = [BLUE, PURPLE]
+
+    for i in range(len(conditions)):
+        condition = conditions[i]
+        color = colors[i]
+
+        ax[i].bar(
+            df["pos"],
+            np.ones_like(df["pos"]),
+            width=2,
+            color="0.8",
+            zorder=1,
+        )
+
+        ax[i].bar(
+            df["pos"],
+            df[f"mu_{condition}"],
+            width=2,
+            color=color,
+            zorder=2,
+        )
+
+        ax[i].spines[["top", "right"]].set_visible(False)
+
+        ax[i].yaxis.set_label_position("right")
+
+        ax[i].set_ylabel(
+            tracks[i],
+            color=colors[i],
+            fontweight="bold",
+            rotation=270,
+            fontsize=9,
+            labelpad=15,
+        )
+
+        ax[i].yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+
+    lo = tss - surround
+    hi = tss + surround
+
+    ax[0].set_xlim(lo, hi)
+
+    xticks = np.arange(lo, hi + 0.1, 100)
+    offsets = xticks - tss
+    labels = []
+    for off in offsets:
+        if off > 0:
+            label = "+" + str(round(off)) + " bp"
+        elif off == 0:
+            label = ""
+        else:
+            label = str(round(off)) + " bp"
+        labels.append(label)
+
+    ax[0].set_xticks(xticks, labels=labels)
+
+    ax[1].text(
+        tss,
+        -0.09,
+        targeted_gene + " TSS",
+        ha="center",
+        va="top",
+        fontweight="bold",
+    )
+
+    #  ax[0].annotate(
+    #      targeted_gene,
+    #      xy=(tss, 1.01),
+    #      xytext=(tss, 1.27),
+    #      ha="center",
+    #      va="bottom",
+    #      fontweight="bold",
+    #      xycoords=ax[0].get_xaxis_transform(),
+    #      textcoords=ax[0].get_xaxis_transform(),
+    #      arrowprops=dict(
+    #          facecolor="black",
+    #          headwidth=8,
+    #          headlength=8,
+    #      ),
+    #  )
+
+    fig.supylabel("% reads methylated", fontweight="bold")
 
     fig.tight_layout()
 

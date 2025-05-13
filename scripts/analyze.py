@@ -224,7 +224,7 @@ score_yticklabels = abs(score_yticks)
 
 for cell_line, _, _, base in comparisons_iter():
     targeted_gene = targeted_genes[cell_line]
-    tss = lib.gene_info(
+    tss_index = lib.gene_info(
         gene_metadata,
         etest[base],
         targeted_gene,
@@ -242,7 +242,7 @@ for cell_line, _, _, base in comparisons_iter():
         yticklabels=score_yticklabels,
         ylabel=r"$\bf{Significance}$ $\bf{score}$" + "\n" + r"$-\log_{10}($FDR$)$",
         use_xticks=True,
-        arrow=(targeted_gene, tss),
+        arrow=(targeted_gene, tss_index),
     )[0].save_organized(
         OUTPUT_DIR,
         "05-EMseq-manhattan",
@@ -260,7 +260,7 @@ effect_size_yticklabels = [round(yt, 2) for yt in effect_size_yticks]
 for cell_line, _, _, base in comparisons_iter():
     targeted_gene = targeted_genes[cell_line]
     gi = lib.gene_info(gene_metadata, etest[base], targeted_gene)
-    tss = gi["tss_index"]
+    tss_index = gi["tss_index"]
     surround = gi["surround"]
 
     print(f"Working on zoomed {base} Manhattan plot...")
@@ -275,7 +275,7 @@ for cell_line, _, _, base in comparisons_iter():
         yticklabels=effect_size_yticklabels,
         ylabel=r"$\bf{Effect}$ $\bf{size}$",
         use_xticks=False,
-        arrow=(targeted_gene, tss),
+        arrow=(targeted_gene, tss_index),
     )[0].save_organized(
         OUTPUT_DIR,
         "06-EMseq-zoomed-manhattan",
@@ -312,14 +312,14 @@ for cell_line, _, _, base in comparisons_iter():
             ).select(
                 pl.col("ensembl_gene_id_version"),
                 (
-                    -pl.col("mean_diff").sign()  # TODO swap in DSS
+                    pl.col("mean_diff").sign()
                     * pl.col("min_fdr")
                     .log(
                         base=10,
                     )
                     .neg()
                 ).alias("escore"),
-                -pl.col("mean_diff").alias("methylation_diff"),  # TODO swap in DSS
+                pl.col("mean_diff").alias("methylation_diff"),
                 pl.col("min_fdr").alias("methylation_fdr"),
             ),
             on="ensembl_gene_id_version",
@@ -369,4 +369,26 @@ for cell_line, _, _, base in comparisons_iter():
 
     export_data.sort(by="methylation_fdr").head(10).write_csv(
         os.path.join(csv_dir, base + "-by-methylation.csv"),
+    )
+
+# %% Create methylation plots
+
+importlib.reload(lib)
+
+for cell_line, _, _, base in comparisons_iter():
+    targeted_gene = targeted_genes[cell_line]
+    gi = lib.gene_info(gene_metadata, etest[base], targeted_gene)
+    tss = gi["tss"]
+    surround = gi["surround"]
+
+    lib.methylation_plot(
+        etest[base].filter(surround),
+        tracks=("non-targeting", "targeting"),
+        targeted_gene=targeted_gene,
+        tss=tss,
+        surround=500,
+    )[0].save_organized(
+        OUTPUT_DIR,
+        "08-EMseq-methylation",
+        base,
     )

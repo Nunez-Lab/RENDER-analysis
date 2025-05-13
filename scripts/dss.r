@@ -81,8 +81,8 @@ for (i in 1:nrow(comparisons)) {
 
     dmlTest = DMLtest(
         BSobj,
-        group1=control$sample,
-        group2=treatment$sample,
+        group1=treatment$sample,
+        group2=control$sample,
         smoothing=TRUE,
         ncores=8
     )
