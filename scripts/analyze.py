@@ -34,17 +34,17 @@ OUTPUT_DIR = sys.argv[8]
 ################################################################################
 # %% RNA-seq count plots
 
-METADATA_DIR = "metadata"
-GENE_METADATA_DIR = "output/gene-metadata"
-
-RNA_ABUNDANCE_PATH = "output/RNAseq/aggregated-reads/abundance.csv"
-RNA_TEST_DIR = "output/RNAseq/deseq2"
-
-EM_AVG_PATH = "output/EMseq/average-methylation-info/info.tsv"
-EM_TEST_DIR = "output/EMseq/dss"
-EM_AGG_DIR = "output/EMseq/dss-aggregated"
-
-OUTPUT_DIR = "output/analysis"
+# METADATA_DIR = "metadata"
+# GENE_METADATA_DIR = "output/gene-metadata"
+#
+# RNA_ABUNDANCE_PATH = "output/RNAseq/aggregated-reads/abundance.csv"
+# RNA_TEST_DIR = "output/RNAseq/deseq2"
+#
+# EM_AVG_PATH = "output/EMseq/average-methylation-info/info.tsv"
+# EM_TEST_DIR = "output/EMseq/dss"
+# EM_AGG_DIR = "output/EMseq/dss-aggregated"
+#
+# OUTPUT_DIR = "output/analysis"
 
 # %% Load metadata
 

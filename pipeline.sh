@@ -316,8 +316,6 @@ uv run \
 ################################################################################
 ## %% Analysis
 
-# %% Generate volcano plot
-
 mkdir -p output/analysis
 
 uv run \
