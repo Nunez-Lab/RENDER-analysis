@@ -16,6 +16,8 @@ except ModuleNotFoundError:
 
 importlib.reload(lib)
 
+QUICK = True
+
 ################################################################################
 # %% Command-line arguments
 
@@ -183,7 +185,6 @@ for cell_line, control, treatment, base in comparisons_iter():
         treatment_name="targeting",
         control_name="non-targeting",
         highlight=pl.col("external_gene_name") == targeted_genes[cell_line],
-        threshold=15,
         gene_name_feature="external_gene_name",
     )[0].save_organized(
         OUTPUT_DIR,
@@ -222,33 +223,34 @@ importlib.reload(lib)
 score_yticks = np.arange(-250, 251, 50)
 score_yticklabels = abs(score_yticks)
 
-for cell_line, _, _, base in comparisons_iter():
-    targeted_gene = targeted_genes[cell_line]
-    tss_index = lib.gene_info(
-        gene_metadata,
-        etest[base],
-        targeted_gene,
-    )["tss_index"]
+if not QUICK:
+    for cell_line, _, _, base in comparisons_iter():
+        targeted_gene = targeted_genes[cell_line]
+        tss_index = lib.gene_info(
+            gene_metadata,
+            etest[base],
+            targeted_gene,
+        )["tss_index"]
 
-    print(f"Working on {base} Manhattan plot...")
+        print(f"Working on {base} Manhattan plot...")
 
-    lib.manhattan(
-        etest[base].filter(pl.col("chr_order") < 25),
-        by="chr",
-        feature="score",
-        two_sided=("targeting", "non-targeting"),
-        highlight=None,
-        yticks=score_yticks,
-        yticklabels=score_yticklabels,
-        ylabel=r"$\bf{Significance}$ $\bf{score}$" + "\n" + r"$-\log_{10}($FDR$)$",
-        use_xticks=True,
-        arrow=(targeted_gene, tss_index),
-    )[0].save_organized(
-        OUTPUT_DIR,
-        "05-EMseq-manhattan",
-        base,
-        svg=False,
-    )
+        lib.manhattan(
+            etest[base].filter(pl.col("chr_order") < 25),
+            by="chr",
+            feature="score",
+            two_sided=("targeting", "non-targeting"),
+            highlight=None,
+            yticks=score_yticks,
+            yticklabels=score_yticklabels,
+            ylabel=r"$\bf{Significance}$ $\bf{score}$" + "\n" + r"$-\log_{10}($FDR$)$",
+            use_xticks=True,
+            arrow=(targeted_gene, tss_index),
+        )[0].save_organized(
+            OUTPUT_DIR,
+            "05-EMseq-manhattan",
+            base,
+            svg=False,
+        )
 
 # %% Create zoomed Manhattan plots
 
@@ -377,16 +379,22 @@ importlib.reload(lib)
 
 for cell_line, _, _, base in comparisons_iter():
     targeted_gene = targeted_genes[cell_line]
-    gi = lib.gene_info(gene_metadata, etest[base], targeted_gene)
+    surround_amount = 2000
+    gi = lib.gene_info(
+        gene_metadata,
+        etest[base],
+        targeted_gene,
+        surround_amount=surround_amount,
+    )
     tss = gi["tss"]
     surround = gi["surround"]
 
     lib.methylation_plot(
         etest[base].filter(surround),
-        tracks=("non-targeting", "targeting"),
+        tracks=("Non-targeting", "Targeting"),
         targeted_gene=targeted_gene,
         tss=tss,
-        surround=500,
+        surround=surround_amount,
     )[0].save_organized(
         OUTPUT_DIR,
         "08-EMseq-methylation",

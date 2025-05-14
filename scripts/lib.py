@@ -7,6 +7,16 @@ import matplotlib.ticker as mtick
 import numpy as np
 import polars as pl
 
+# Source: https://sronpersonalpages.nl/~pault/
+BLUE = "#4477AA"
+PURPLE = "#AA3377"
+GREEN = "#228833"
+PINK = "#EE6677"
+RED = "#880000"
+YELLOW = "#CCBB44"
+
+plt.rcParams["font.family"] = "Arial"
+
 
 def save(self, filename, exts=None, *args, **kwargs):
     dirname = os.path.dirname(filename)
@@ -123,13 +133,11 @@ def volcano_plot(
     treatment_name,
     control_name,
     highlight=pl.lit(False),
-    threshold=None,
-    show_threshold_line=False,
     gene_name_feature=None,
+    highlight_color=RED,
+    fontsize=13,
+    dotsize=25,
 ):
-    if gene_name_feature is not None:
-        assert threshold is not None
-
     fig, ax = plt.subplots(1, 1, figsize=(4, 4))
 
     x = "log2FoldChange"
@@ -139,8 +147,6 @@ def volcano_plot(
         **{
             y: -pl.col("padj").log(base=10),
         }
-    ).filter(
-        pl.col("baseMean") > 10,
     )
 
     ax.scatter(
@@ -149,63 +155,44 @@ def volcano_plot(
         c="0.5",
         zorder=5,
         alpha=0.5,
-        s=5,
+        s=dotsize,
     )
 
     ax.scatter(
         df.filter(highlight)[x],
         df.filter(highlight)[y],
-        c=PURPLE,
+        c=highlight_color,
         zorder=10,
         alpha=1,
-        s=10,
+        s=dotsize,
     )
 
-    if threshold is not None:
-        if show_threshold_line:
-            ax.axhline(
-                y=threshold,
-                ls="--",
-                c="0.7",
-                lw=1,
+    if gene_name_feature is not None:
+        for row in df.filter(highlight).iter_rows(named=True):
+            ax.annotate(
+                text=row[gene_name_feature],
+                xy=(row[x], row[y]),
+                zorder=15,
+                xytext=(-3, -3),
+                textcoords="offset pixels",
+                ha="right",
+                va="top",
+                color=highlight_color,
+                fontsize=fontsize,
             )
-
-        if gene_name_feature is not None:
-            for row in df.filter(
-                pl.col(y) > threshold,
-                highlight,
-            ).iter_rows(named=True):
-                ax.annotate(
-                    text=row[gene_name_feature],
-                    xy=(row[x], row[y]),
-                    zorder=15,
-                    xytext=(3, 3),
-                    textcoords="offset pixels",
-                    ha="left",
-                    va="top",
-                    color=PURPLE,
-                )
-
-            for row in df.filter(
-                pl.col(y) > threshold,
-                ~highlight,
-            ).iter_rows(named=True):
-                ax.annotate(
-                    text=row[gene_name_feature],
-                    xy=(row[x], row[y]),
-                    zorder=15,
-                    xytext=(3, 3),
-                    textcoords="offset pixels",
-                    ha="left",
-                    va="top",
-                    color="0.5",
-                )
 
     ax.set_xlabel(r"$\log_{2}($fold change$)$")
     ax.set_ylabel(r"$-\log_{10}($adjusted $p$-value$)$")
 
-    xmax = df[x].abs().max() + 1
-    ax.set_xlim(-xmax, xmax)
+    xmax = df[x].abs().max()
+    if xmax < 12:
+        xmax = 12
+        ax.set_xlim(-xmax, xmax)
+        ax.set_xticks(np.arange(-xmax, xmax + 0.1, 2))
+    else:
+        xmax = max(30, xmax)
+        ax.set_ylim(-xmax, xmax)
+        ax.set_xticks(np.arange(-xmax, xmax + 0.1, 10))
 
     ymax = df[y].max()
     if ymax < 30:
@@ -225,6 +212,7 @@ def volcano_plot(
         ha="left",
         va="top",
         transform=ax.transAxes,
+        fontsize=fontsize,
     )
 
     ax.text(
@@ -236,9 +224,12 @@ def volcano_plot(
         ha="right",
         va="top",
         transform=ax.transAxes,
+        fontsize=fontsize,
     )
 
-    ax.axvline(x=0, ls="--", lw=1, color="0.7")
+    ax.axvline(x=-1, ls="--", lw=1, color="0.7")
+    ax.axvline(x=+1, ls="--", lw=1, color="0.7")
+    ax.axhline(y=5, ls="--", lw=1, color="0.7")
 
     ax.spines[["top", "right"]].set_visible(False)
 
@@ -304,13 +295,6 @@ def load_dss_results(path):
         .sort(by=["chr_order", "pos"])
         .with_row_index()
     )
-
-
-# Source: https://sronpersonalpages.nl/~pault/
-BLUE = "#4477AA"
-PURPLE = "#AA3377"
-GREEN = "#228833"
-RED = "#EE6677"
 
 
 def manhattan(
@@ -465,7 +449,7 @@ def manhattan(
     return fig, ax
 
 
-def gene_info(metadata, data, symbol):
+def gene_info(metadata, data, symbol, surround_amount=10_000):
     row = metadata.row(
         by_predicate=pl.col("external_gene_name") == symbol,
         named=True,
@@ -487,8 +471,8 @@ def gene_info(metadata, data, symbol):
             (pl.col("chr") == chr)
             & (
                 pl.col("pos").is_between(
-                    row["start_position"] - 10_000,
-                    row["end_position"] + 10_000,
+                    row["start_position"] - surround_amount,
+                    row["end_position"] + surround_amount,
                 )
             )
         ),
@@ -504,6 +488,9 @@ def correlation_plot(
     ylabel,
     gene_name_feature="external_gene_name",
     highlight=pl.lit(False),
+    highlight_color=RED,
+    fontsize=13,
+    dotsize=25,
 ):
     fig, ax = plt.subplots(1, 1, figsize=(4, 4))
 
@@ -522,28 +509,29 @@ def correlation_plot(
         c="0.5",
         zorder=5,
         alpha=0.5,
-        s=5,
+        s=dotsize,
     )
 
     ax.scatter(
         df.filter(highlight)[s1],
         df.filter(highlight)[s2],
-        c=PURPLE,
+        c=highlight_color,
         zorder=10,
         alpha=1,
-        s=10,
+        s=dotsize,
     )
 
     for row in df.filter(highlight).iter_rows(named=True):
         ax.annotate(
             text=row[gene_name_feature],
             xy=(row[s1], row[s2]),
-            xytext=(3, 3),
+            xytext=(3, -3),
             textcoords="offset pixels",
             ha="left",
             va="top",
-            color=PURPLE,
+            color=highlight_color,
             zorder=15,
+            fontsize=fontsize,
         )
 
     ax.set_xlabel(xlabel)
@@ -563,8 +551,12 @@ def correlation_plot(
     ax.set_ylim(-ymax, ymax)
     ax.set_yticks(np.arange(-ymax, ymax + 0.1, 50))
 
-    ax.axvline(x=0, lw=1, ls="--", color="0.8")
-    ax.axhline(y=0, lw=1, ls="--", color="0.8")
+    ax.axvline(x=-5, lw=1, ls="--", color="0.8")
+    ax.axvline(x=+5, lw=1, ls="--", color="0.8")
+
+    ax.axhline(y=-5, lw=1, ls="--", color="0.8")
+    ax.axhline(y=+5, lw=1, ls="--", color="0.8")
+
     ax.spines[["top", "right"]].set_visible(False)
 
     fig.tight_layout()
@@ -595,21 +587,42 @@ def methylation_plot(
         condition = conditions[i]
         color = colors[i]
 
-        ax[i].bar(
+        ax[i].vlines(
             df["pos"],
-            np.ones_like(df["pos"]),
-            width=2,
-            color="0.8",
+            0,
+            1,
+            colors="0.9",
             zorder=1,
+            linewidth=1,
         )
 
-        ax[i].bar(
+        ax[i].vlines(
             df["pos"],
+            0,
             df[f"mu_{condition}"],
-            width=2,
             color=color,
             zorder=2,
+            linewidth=1,
         )
+
+        # ax[i].bar(
+        #    df["pos"],
+        #    np.ones_like(df["pos"]),
+        #    width=3,
+        #    color="0.9",
+        #    zorder=1,
+        #    hatch="----",
+        #    edgecolor="white",
+        #    linewidth=0,
+        # )
+
+        # ax[i].bar(
+        #     df["pos"],
+        #     df[f"mu_{condition}"],
+        #     width=3,
+        #     color=color,
+        #     zorder=2,
+        # )
 
         ax[i].spines[["top", "right"]].set_visible(False)
 
@@ -620,18 +633,20 @@ def methylation_plot(
             color=colors[i],
             fontweight="bold",
             rotation=270,
-            fontsize=9,
+            fontsize=11,
             labelpad=15,
         )
 
         ax[i].yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+
+        ax[i].set_ylim(0, 1)
 
     lo = tss - surround
     hi = tss + surround
 
     ax[0].set_xlim(lo, hi)
 
-    xticks = np.arange(lo, hi + 0.1, 100)
+    xticks = np.arange(lo, hi + 0.1, 500)
     offsets = xticks - tss
     labels = []
     for off in offsets:
@@ -670,7 +685,11 @@ def methylation_plot(
     #      ),
     #  )
 
-    fig.supylabel("% reads methylated", fontweight="bold")
+    fig.supylabel(
+        "% reads methylated",
+        fontweight="bold",
+        fontsize=13,
+    )
 
     fig.tight_layout()
 
