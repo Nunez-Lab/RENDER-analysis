@@ -491,14 +491,15 @@ def correlation_plot(
     highlight_color=RED,
     fontsize=13,
     dotsize=25,
+    s2_bound=200,
 ):
     fig, ax = plt.subplots(1, 1, figsize=(4, 4))
 
     df = df.with_columns(
         **{
             s2: df[s2].clip(
-                lower_bound=-250,
-                upper_bound=250,
+                lower_bound=-s2_bound,
+                upper_bound=s2_bound,
             )
         }
     )
@@ -547,7 +548,7 @@ def correlation_plot(
         ax.set_xlim(-xmax, xmax)
         ax.set_yticks(np.arange(-xmax, xmax + 0.1, 30))
 
-    ymax = max(250, df[s2].abs().max())
+    ymax = max(s2_bound, df[s2].abs().max())
     ax.set_ylim(-ymax, ymax)
     ax.set_yticks(np.arange(-ymax, ymax + 0.1, 50))
 

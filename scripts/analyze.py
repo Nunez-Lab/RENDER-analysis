@@ -36,17 +36,17 @@ OUTPUT_DIR = sys.argv[8]
 ################################################################################
 # %% RNA-seq count plots
 
-# METADATA_DIR = "metadata"
-# GENE_METADATA_DIR = "output/gene-metadata"
-#
-# RNA_ABUNDANCE_PATH = "output/RNAseq/aggregated-reads/abundance.csv"
-# RNA_TEST_DIR = "output/RNAseq/deseq2"
-#
-# EM_AVG_PATH = "output/EMseq/average-methylation-info/info.tsv"
-# EM_TEST_DIR = "output/EMseq/dss"
-# EM_AGG_DIR = "output/EMseq/dss-aggregated"
-#
-# OUTPUT_DIR = "output/analysis"
+METADATA_DIR = "metadata"
+GENE_METADATA_DIR = "output/gene-metadata"
+
+RNA_ABUNDANCE_PATH = "output/RNAseq/aggregated-reads/abundance.csv"
+RNA_TEST_DIR = "output/RNAseq/deseq2"
+
+EM_AVG_PATH = "output/EMseq/average-methylation-info/info.tsv"
+EM_TEST_DIR = "output/EMseq/dss"
+EM_AGG_DIR = "output/EMseq/dss-aggregated"
+
+OUTPUT_DIR = "output/analysis"
 
 # %% Load metadata
 
@@ -340,10 +340,10 @@ for cell_line, _, _, base in comparisons_iter():
         data,
         "rscore",
         "escore",
-        xlabel=r"$\bf{RNAseq}$ $\bf{significance}$ $\bf{score}$"
+        xlabel=r"$\bf{Differential}$ $\bf{expression}$"
         + "\n"
         + r"$-\log_{10}($adjusted $p$-value$) \cdot $sign$($difference$)$",
-        ylabel=r"$\bf{EMseq}$ $\bf{significance}$ $\bf{score}$"
+        ylabel=r"$\bf{Differential}$ $\bf{methylation}$"
         + "\n"
         + r"$-\log_{10}($FDR$) \cdot $sign$($difference$)$",
         highlight=pl.col("external_gene_name") == targeted_genes[cell_line],
