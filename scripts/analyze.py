@@ -3,7 +3,6 @@
 
 import importlib
 import os
-import sys
 
 import matplotlib.ticker as mtick
 import numpy as np
@@ -21,17 +20,17 @@ QUICK = True
 ################################################################################
 # %% Command-line arguments
 
-METADATA_DIR = sys.argv[1]
-GENE_METADATA_DIR = sys.argv[2]
-
-RNA_ABUNDANCE_PATH = sys.argv[3]
-RNA_TEST_DIR = sys.argv[4]
-
-EM_AVG_PATH = sys.argv[5]
-EM_TEST_DIR = sys.argv[6]
-EM_AGG_DIR = sys.argv[7]
-
-OUTPUT_DIR = sys.argv[8]
+# METADATA_DIR = sys.argv[1]
+# GENE_METADATA_DIR = sys.argv[2]
+#
+# RNA_ABUNDANCE_PATH = sys.argv[3]
+# RNA_TEST_DIR = sys.argv[4]
+#
+# EM_AVG_PATH = sys.argv[5]
+# EM_TEST_DIR = sys.argv[6]
+# EM_AGG_DIR = sys.argv[7]
+#
+# OUTPUT_DIR = sys.argv[8]
 
 ################################################################################
 # %% RNA-seq count plots
@@ -117,7 +116,9 @@ for (cell_line, condition), g in rmeta.group_by("cell_line", "condition"):
         rabundance,
         rep1,
         rep2,
-        title=f"Replicates for {cell_line} {condition}",
+        highlight=pl.col("external_gene_name") == targeted_genes[cell_line],
+        xlabel="Replicate\\ 1",
+        ylabel="Replicate\\ 2",
     )[0].save_organized(
         OUTPUT_DIR,
         "01-RNAseq-replicates",
@@ -150,8 +151,7 @@ for cell_line, control, treatment, base in comparisons_iter():
         "control",
         "treatment",
         xlabel=r"Non\!-\!targeting",
-        ylabel=r"Targeting\ " + targeted_genes[cell_line],
-        title="RENDER in " + nice_cell_lines[cell_line] + "s",
+        ylabel="Targeting",
         highlight=pl.col("external_gene_name") == targeted_genes[cell_line],
     )[0].save_organized(
         OUTPUT_DIR,
@@ -177,6 +177,14 @@ for cell_line, control, treatment, base in comparisons_iter():
             how="left",
             validate="1:1",
         )
+        .with_columns(score=-pl.col("padj").log(base=10))
+    )
+
+    csv_dir = os.path.join(OUTPUT_DIR, "03-RNAseq-volcano", "csv")
+    os.makedirs(csv_dir, exist_ok=True)
+
+    rtest.filter(~pl.col("padj").is_null()).sort(by="padj").write_csv(
+        os.path.join(csv_dir, base + ".csv"),
     )
 
     lib.volcano_plot(
@@ -365,11 +373,11 @@ for cell_line, _, _, base in comparisons_iter():
         "methylation_fdr",
     )
 
-    export_data.sort(by="expression_padj").head(10).write_csv(
+    export_data.sort(by="expression_padj").write_csv(
         os.path.join(csv_dir, base + "-by-expression.csv"),
     )
 
-    export_data.sort(by="methylation_fdr").head(10).write_csv(
+    export_data.sort(by="methylation_fdr").write_csv(
         os.path.join(csv_dir, base + "-by-methylation.csv"),
     )
 

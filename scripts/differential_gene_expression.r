@@ -83,7 +83,9 @@ for (i in 1:nrow(comparisons)) {
 
     res = results(
         dds,
-        contrast=c("condition", row$treatment, row$control)
+        contrast=c("condition", row$treatment, row$control),
+        independentFiltering=FALSE
+        # cooksCutoff=FALSE
     )
 
     # Write results to CSV

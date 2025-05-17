@@ -15,6 +15,8 @@ PINK = "#EE6677"
 RED = "#880000"
 YELLOW = "#CCBB44"
 
+NON_HIGHLIGHTED_COLOR = "0.6"
+
 plt.rcParams["font.family"] = "Arial"
 
 
@@ -58,11 +60,15 @@ def rna_count_plot(
     x_feature,
     y_feature,
     *,
-    title,
+    annotation_config=("left", "bottom", 3, 0),  # (ha, va, x offset, y offset)
+    title=None,
     highlight=pl.lit(False),
     gene_name_feature="external_gene_name",
     xlabel=None,
     ylabel=None,
+    highlight_color=RED,
+    fontsize=13,
+    dotsize=25,
 ):
     xlabel = x_feature if xlabel is None else xlabel
     ylabel = y_feature if ylabel is None else ylabel
@@ -77,19 +83,19 @@ def rna_count_plot(
     ax.scatter(
         df.filter(~highlight)[x_feature],
         df.filter(~highlight)[y_feature],
-        c="0.5",
+        c=NON_HIGHLIGHTED_COLOR,
         zorder=5,
         alpha=0.5,
-        s=5,
+        s=dotsize,
     )
 
     ax.scatter(
         df.filter(highlight)[x_feature],
         df.filter(highlight)[y_feature],
-        c=PURPLE,
+        c=highlight_color,
         zorder=10,
         alpha=1,
-        s=10,
+        s=dotsize,
     )
 
     if gene_name_feature is not None:
@@ -98,11 +104,12 @@ def rna_count_plot(
                 text=row[gene_name_feature],
                 xy=(row[x_feature], row[y_feature]),
                 zorder=15,
-                xytext=(3, 3),
+                xytext=(annotation_config[2], annotation_config[3]),
                 textcoords="offset pixels",
-                ha="left",
-                va="top",
-                color=PURPLE,
+                ha=annotation_config[0],
+                va=annotation_config[1],
+                color=highlight_color,
+                fontsize=fontsize,
             )
 
     ax.set_xlabel(
@@ -113,17 +120,25 @@ def rna_count_plot(
         r"$\bf{" + ylabel.replace("_", r"\_") + "}$\n" + r"$\log_{2}(1 + $TPM$)$"
     )
 
-    ax.set_title(title)
+    if title is not None:
+        ax.set_title(title)
+
     ax.spines[["top", "right"]].set_visible(False)
 
-    ax.set_xticks(np.arange(0, 16.1, 2))
-    ax.set_yticks(np.arange(0, 16.1, 2))
-    ax.set_xlim(0, 16)
-    ax.set_ylim(0, 16)
+    lim = 16  # max(df[x_feature].max(), df[y_feature].max(), 16)
+    ax.set_xticks(np.arange(0, lim + 0.1, 2))
+    ax.set_yticks(np.arange(0, lim + 0.1, 2))
+    ax.set_xlim(0, lim)
+    ax.set_ylim(0, lim)
 
     fig.tight_layout()
 
     return fig, ax
+
+
+def rscore_range(maxval):
+    extra = 50 if int(maxval) % 100 > 90 else 0
+    return np.ceil(maxval / 50) * 50 + extra
 
 
 def volcano_plot(
@@ -143,16 +158,10 @@ def volcano_plot(
     x = "log2FoldChange"
     y = "score"
 
-    df = df.with_columns(
-        **{
-            y: -pl.col("padj").log(base=10),
-        }
-    )
-
     ax.scatter(
         df.filter(~highlight)[x],
         df.filter(~highlight)[y],
-        c="0.5",
+        c=NON_HIGHLIGHTED_COLOR,
         zorder=5,
         alpha=0.5,
         s=dotsize,
@@ -184,24 +193,13 @@ def volcano_plot(
     ax.set_xlabel(r"$\log_{2}($fold change$)$")
     ax.set_ylabel(r"$-\log_{10}($adjusted $p$-value$)$")
 
-    xmax = df[x].abs().max()
-    if xmax < 12:
-        xmax = 12
-        ax.set_xlim(-xmax, xmax)
-        ax.set_xticks(np.arange(-xmax, xmax + 0.1, 2))
-    else:
-        xmax = max(30, xmax)
-        ax.set_ylim(-xmax, xmax)
-        ax.set_xticks(np.arange(-xmax, xmax + 0.1, 10))
+    xmax = max(df[x].abs().max(), 16)
+    ax.set_xlim(-xmax, xmax)
+    ax.set_xticks(np.arange(-xmax, xmax + 0.1, 4))
 
-    ymax = df[y].max()
-    if ymax < 30:
-        ax.set_ylim(0, 30)
-        ax.set_yticks(np.arange(0, 30.1, 5))
-    else:
-        ymax = max(150, ymax)
-        ax.set_ylim(0, ymax)
-        ax.set_yticks(np.arange(0, ymax + 0.1, 30))
+    ymax = rscore_range(df[y].max())
+    ax.set_ylim(0, ymax)
+    ax.set_yticks(np.arange(0, ymax + 0.1, 50))
 
     ax.text(
         0.03,
@@ -227,9 +225,9 @@ def volcano_plot(
         fontsize=fontsize,
     )
 
-    ax.axvline(x=-1, ls="--", lw=1, color="0.7")
-    ax.axvline(x=+1, ls="--", lw=1, color="0.7")
-    ax.axhline(y=5, ls="--", lw=1, color="0.7")
+    ax.axvline(x=-1, ls="--", lw=1, color="0.8")
+    ax.axvline(x=+1, ls="--", lw=1, color="0.8")
+    ax.axhline(y=5, ls="--", lw=1, color="0.8")
 
     ax.spines[["top", "right"]].set_visible(False)
 
@@ -507,7 +505,7 @@ def correlation_plot(
     ax.scatter(
         df.filter(~highlight)[s1],
         df.filter(~highlight)[s2],
-        c="0.5",
+        c=NON_HIGHLIGHTED_COLOR,
         zorder=5,
         alpha=0.5,
         s=dotsize,
@@ -538,15 +536,13 @@ def correlation_plot(
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
 
-    xmax = df.filter(pl.col(s1).is_finite())[s1].abs().max()
-    if xmax < 30:
-        xmax = 30
-        ax.set_xlim(-xmax, xmax)
-        ax.set_xticks(np.arange(-xmax, xmax + 0.1, 10))
+    xmax = df[s1].abs().max()
+    if xmax < 200:
+        xmax = 200
     else:
-        xmax = max(150, xmax)
-        ax.set_xlim(-xmax, xmax)
-        ax.set_yticks(np.arange(-xmax, xmax + 0.1, 30))
+        xmax = max(xmax, 400)
+    ax.set_xlim(-xmax, xmax)
+    ax.set_xticks(np.arange(-xmax, xmax + 0.1, 100))
 
     ymax = max(s2_bound, df[s2].abs().max())
     ax.set_ylim(-ymax, ymax)
