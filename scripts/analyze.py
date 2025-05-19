@@ -147,11 +147,18 @@ for cell_line, control, treatment, base in comparisons_iter():
         pl.mean_horizontal(pl.col(treatment_samples)).alias("treatment"),
     )
 
+    if control == "untreated":
+        xlabel = "Untreated"
+    elif control == "non_targeting":
+        xlabel = r"Non\!-\!targeting"
+    else:
+        raise ValueError(f"unknown control '{control}'")
+
     lib.rna_count_plot(
         df,
         "control",
         "treatment",
-        xlabel=r"Non\!-\!targeting",
+        xlabel=xlabel,
         ylabel="Targeting",
         highlight=pl.col("external_gene_name") == targeted_genes[cell_line],
     )[0].save_organized(
@@ -188,11 +195,18 @@ for cell_line, control, treatment, base in comparisons_iter():
         os.path.join(csv_dir, base + ".csv"),
     )
 
+    if control == "untreated":
+        control_name = "untreated"
+    elif control == "non_targeting":
+        control_name = "non-targeting"
+    else:
+        raise ValueError(f"unknown control '{control}'")
+
     lib.volcano_plot(
         rtest,
         title=f"RENDER {treatment} vs {control} for {cell_line}",
         treatment_name="targeting",
-        control_name="non-targeting",
+        control_name=control_name,
         highlight=pl.col("external_gene_name") == targeted_genes[cell_line],
         gene_name_feature="external_gene_name",
     )[0].save_organized(

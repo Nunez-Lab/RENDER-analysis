@@ -2,3 +2,6 @@ cell_line,control,treatment
 jurkat,non_targeting,pooled
 jurkat,non_targeting,single
 hek293t,non_targeting,clta
+jurkat,untreated,pooled
+jurkat,untreated,single
+hek293t,untreated,clta
