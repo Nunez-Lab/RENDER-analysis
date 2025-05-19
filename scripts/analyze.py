@@ -119,6 +119,7 @@ for (cell_line, condition), g in rmeta.group_by("cell_line", "condition"):
         highlight=pl.col("external_gene_name") == targeted_genes[cell_line],
         xlabel="Replicate\\ 1",
         ylabel="Replicate\\ 2",
+        show_r2=True,
     )[0].save_organized(
         OUTPUT_DIR,
         "01-RNAseq-replicates",

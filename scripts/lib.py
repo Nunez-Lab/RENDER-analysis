@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 import numpy as np
 import polars as pl
+import scipy.stats
 
 # Source: https://sronpersonalpages.nl/~pault/
 BLUE = "#4477AA"
@@ -69,6 +70,7 @@ def rna_count_plot(
     highlight_color=RED,
     fontsize=13,
     dotsize=25,
+    show_r2=False,
 ):
     xlabel = x_feature if xlabel is None else xlabel
     ylabel = y_feature if ylabel is None else ylabel
@@ -111,6 +113,19 @@ def rna_count_plot(
                 color=highlight_color,
                 fontsize=fontsize,
             )
+
+    if show_r2:
+        result = scipy.stats.pearsonr(df[x_feature], df[y_feature])
+        r2 = result.statistic**2
+        ax.text(
+            0.05,
+            0.95,
+            "$R^2 = " + str(round(r2, 3)) + "$",
+            transform=ax.transAxes,
+            ha="left",
+            va="top",
+            fontsize=fontsize,
+        )
 
     ax.set_xlabel(
         r"$\bf{" + xlabel.replace("_", r"\_") + "}$\n" + r"$\log_{2}(1 + $TPM$)$"
