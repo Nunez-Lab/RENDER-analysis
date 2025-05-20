@@ -26,7 +26,7 @@ gene_metadata = (
     .filter(pl.col("gene_biotype") == "protein_coding")
     .with_columns(
         promoter_start=pl.col("start_position") - 500,
-        promoter_end=pl.col("end_position") + 500,
+        promoter_end=pl.col("start_position") + 500,
     )
     .select(
         "ensembl_gene_id_version",
