@@ -210,8 +210,8 @@ for cell_line, control, treatment, base in comparisons_iter():
 
     for kind, df in [("ABUNDANCE", rabundance), ("COUNTS", rcounts)]:
         rtest.filter(
-            pl.col("score").abs() > 5,
-            pl.col("log2FoldChange").abs() > 1,
+            pl.col("score").abs() > lib.SCORE_THRESHOLD,
+            pl.col("log2FoldChange").abs() > lib.L2FC_THRESHOLD,
         ).join(
             df,
             on="ensembl_gene_id_version",

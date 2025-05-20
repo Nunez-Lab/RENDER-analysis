@@ -19,6 +19,9 @@ YELLOW = "#CCBB44"
 NON_HIGHLIGHTED_COLOR = "0.6"
 HIGHLIGHT_FONT_OFFSET = 4
 
+L2FC_THRESHOLD = 2
+SCORE_THRESHOLD = 5
+
 plt.rcParams["font.family"] = "Arial"
 
 
@@ -241,9 +244,9 @@ def volcano_plot(
         fontsize=fontsize,
     )
 
-    ax.axvline(x=-1, ls="--", lw=1, color="0.8")
-    ax.axvline(x=+1, ls="--", lw=1, color="0.8")
-    ax.axhline(y=5, ls="--", lw=1, color="0.8")
+    ax.axvline(x=-L2FC_THRESHOLD, ls="--", lw=1, color="0.8")
+    ax.axvline(x=+L2FC_THRESHOLD, ls="--", lw=1, color="0.8")
+    ax.axhline(y=SCORE_THRESHOLD, ls="--", lw=1, color="0.8")
 
     ax.spines[["top", "right"]].set_visible(False)
 
@@ -564,11 +567,11 @@ def correlation_plot(
     ax.set_ylim(-ymax, ymax)
     ax.set_yticks(np.arange(-ymax, ymax + 0.1, 50))
 
-    ax.axvline(x=-5, lw=1, ls="--", color="0.8")
-    ax.axvline(x=+5, lw=1, ls="--", color="0.8")
+    ax.axvline(x=-SCORE_THRESHOLD, lw=1, ls="--", color="0.8")
+    ax.axvline(x=+SCORE_THRESHOLD, lw=1, ls="--", color="0.8")
 
-    ax.axhline(y=-5, lw=1, ls="--", color="0.8")
-    ax.axhline(y=+5, lw=1, ls="--", color="0.8")
+    ax.axhline(y=-SCORE_THRESHOLD, lw=1, ls="--", color="0.8")
+    ax.axhline(y=+SCORE_THRESHOLD, lw=1, ls="--", color="0.8")
 
     ax.spines[["top", "right"]].set_visible(False)
 
