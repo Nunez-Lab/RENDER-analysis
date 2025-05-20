@@ -23,7 +23,7 @@ QUICK = True
 # METADATA_DIR = sys.argv[1]
 # GENE_METADATA_DIR = sys.argv[2]
 #
-# RNA_ABUNDANCE_PATH = sys.argv[3]
+# RNA_AGG_DIR = sys.argv[3]
 # RNA_TEST_DIR = sys.argv[4]
 #
 # EM_AVG_PATH = sys.argv[5]
@@ -38,7 +38,7 @@ QUICK = True
 METADATA_DIR = "metadata"
 GENE_METADATA_DIR = "output/gene-metadata"
 
-RNA_ABUNDANCE_PATH = "output/RNAseq/aggregated-reads/abundance.csv"
+RNA_AGG_DIR = "output/RNAseq/aggregated-reads"
 RNA_TEST_DIR = "output/RNAseq/deseq2"
 
 EM_AVG_PATH = "output/EMseq/average-methylation-info/info.tsv"
@@ -81,7 +81,18 @@ def comparisons_iter():
 rmeta = pl.read_csv(os.path.join(METADATA_DIR, "rna.csv"))
 
 rabundance = (
-    pl.read_csv(RNA_ABUNDANCE_PATH)
+    pl.read_csv(os.path.join(RNA_AGG_DIR, "abundance.csv"))
+    .rename({"": "ensembl_gene_id_version"})
+    .join(
+        gene_metadata,
+        on="ensembl_gene_id_version",
+        how="left",
+        validate="1:1",
+    )
+)
+
+rcounts = (
+    pl.read_csv(os.path.join(RNA_AGG_DIR, "counts.csv"))
     .rename({"": "ensembl_gene_id_version"})
     .join(
         gene_metadata,
@@ -98,6 +109,8 @@ importlib.reload(lib)
 etest = {}
 
 for cell_line, control, treatment, base in comparisons_iter():
+    if control == "untreated":
+        continue
     etest[base] = lib.load_dss_results(
         os.path.join(EM_TEST_DIR, f"{base}.csv"),
     )
@@ -159,7 +172,7 @@ for cell_line, control, treatment, base in comparisons_iter():
         "control",
         "treatment",
         xlabel=xlabel,
-        ylabel="Targeting",
+        ylabel="Treated",
         highlight=pl.col("external_gene_name") == targeted_genes[cell_line],
     )[0].save_organized(
         OUTPUT_DIR,
@@ -195,6 +208,19 @@ for cell_line, control, treatment, base in comparisons_iter():
         os.path.join(csv_dir, base + ".csv"),
     )
 
+    for kind, df in [("ABUNDANCE", rabundance), ("COUNTS", rcounts)]:
+        rtest.filter(
+            pl.col("score").abs() > 5,
+            pl.col("log2FoldChange").abs() > 1,
+        ).join(
+            df,
+            on="ensembl_gene_id_version",
+            how="left",
+            validate="1:1",
+        ).sort(by="padj").write_csv(
+            os.path.join(csv_dir, f"HITS-{kind}-{base}.csv"),
+        )
+
     if control == "untreated":
         control_name = "untreated"
     elif control == "non_targeting":
@@ -205,7 +231,7 @@ for cell_line, control, treatment, base in comparisons_iter():
     lib.volcano_plot(
         rtest,
         title=f"RENDER {treatment} vs {control} for {cell_line}",
-        treatment_name="targeting",
+        treatment_name="treated",
         control_name=control_name,
         highlight=pl.col("external_gene_name") == targeted_genes[cell_line],
         gene_name_feature="external_gene_name",
@@ -311,7 +337,10 @@ for cell_line, _, _, base in comparisons_iter():
 
 importlib.reload(lib)
 
-for cell_line, _, _, base in comparisons_iter():
+for cell_line, control, _, base in comparisons_iter():
+    if control == "untreated":
+        continue
+
     data = (
         pl.read_csv(
             os.path.join(RNA_TEST_DIR, f"{base}.csv"),
@@ -401,6 +430,9 @@ for cell_line, _, _, base in comparisons_iter():
 importlib.reload(lib)
 
 for cell_line, _, _, base in comparisons_iter():
+    if control == "untreated":
+        continue
+
     targeted_gene = targeted_genes[cell_line]
     surround_amount = 2000
     gi = lib.gene_info(

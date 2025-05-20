@@ -17,6 +17,7 @@ RED = "#880000"
 YELLOW = "#CCBB44"
 
 NON_HIGHLIGHTED_COLOR = "0.6"
+HIGHLIGHT_FONT_OFFSET = 4
 
 plt.rcParams["font.family"] = "Arial"
 
@@ -111,7 +112,7 @@ def rna_count_plot(
                 ha=annotation_config[0],
                 va=annotation_config[1],
                 color=highlight_color,
-                fontsize=fontsize,
+                fontsize=fontsize + HIGHLIGHT_FONT_OFFSET,
             )
 
     if show_r2:
@@ -202,7 +203,7 @@ def volcano_plot(
                 ha="right",
                 va="top",
                 color=highlight_color,
-                fontsize=fontsize,
+                fontsize=fontsize + HIGHLIGHT_FONT_OFFSET,
             )
 
     ax.set_xlabel(r"$\log_{2}($fold change$)$")
@@ -545,7 +546,7 @@ def correlation_plot(
             va="top",
             color=highlight_color,
             zorder=15,
-            fontsize=fontsize,
+            fontsize=fontsize + HIGHLIGHT_FONT_OFFSET,
         )
 
     ax.set_xlabel(xlabel)

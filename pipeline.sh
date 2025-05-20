@@ -323,7 +323,7 @@ uv run \
     scripts/analyze.py \
     metadata/ \
     output/gene-metadata/ \
-    $RNA_OUTPUT_DIR/aggregated-reads/abundance.csv \
+    $RNA_OUTPUT_DIR/aggregated-reads \
     $RNA_OUTPUT_DIR/deseq2 \
     $EM_OUTPUT_DIR/average-methylation-info/info.tsv \
     $EM_OUTPUT_DIR/dss \
