@@ -16,10 +16,21 @@ KALLISTO_INDEX="/media/nunez/SSD-Data/genomes/GRCh38_p14_kallisto.idx"
 EM_SEQ_GENOME="/media/nunez/SSD-Data/genomes/EMseq_hg38"
 
 # The number of cores to use
-CORES=56
+CORES=48
 
 # The number to pass to Bismark's --parallel options
 BISMARK_PARALLEL=10
+
+################################################################################
+# %% Variable setup
+
+RNA_INPUT_DIR="raw_data/${RNA_DIR}"
+RNA_OUTPUT_DIR="output/${RNA_DIR}"
+RNA_SAMPLE_NAMES=( $(cat metadata/rna.csv | cut -d ',' -f1 | tail -n +2) )
+
+EM_INPUT_DIR="raw_data/${EM_DIR}"
+EM_OUTPUT_DIR="output/${EM_DIR}"
+EM_SAMPLE_NAMES=( $(cat metadata/em.csv | cut -d ',' -f1 | tail -n +2) )
 
 ################################################################################
 # %% Get gene metadata for downstream analysis
@@ -33,12 +44,6 @@ Rscript \
 
 ################################################################################
 # %% RNA-seq pre-processing
-
-# %% Set input/output directory variables
-
-RNA_INPUT_DIR="raw_data/${RNA_DIR}"
-RNA_OUTPUT_DIR="output/${RNA_DIR}"
-RNA_SAMPLE_NAMES=( $(cat metadata/rna.csv | cut -d ',' -f1 | tail -n +2) )
 
 # %% Run FastQC to perform sequencing quality control checks
 
@@ -129,10 +134,6 @@ Rscript \
 ################################################################################
 # %% EM-seq pre-processing
 
-EM_INPUT_DIR="raw_data/${EM_DIR}"
-EM_OUTPUT_DIR="output/${EM_DIR}"
-EM_SAMPLE_NAMES=( $(cat metadata/em.csv | cut -d ',' -f1 | tail -n +2) )
-
 # %% Run FastQC on EMseq
 
 mkdir -p $EM_OUTPUT_DIR/fastqc
@@ -193,6 +194,15 @@ for name in "${EM_SAMPLE_NAMES[@]}"; do
       -o $EM_OUTPUT_DIR/aligned \
       -1 $EM_OUTPUT_DIR/trimmed/${name}_R1.fastq.gz \
       -2 $EM_OUTPUT_DIR/trimmed/${name}_R2.fastq.gz
+done
+
+# %% Bismark deduplication
+
+mkdir -p $EM_OUTPUT_DIR/aligned-deduplicated
+
+for name in "${EM_SAMPLE_NAMES[@]}"; do
+   echo "Running deduplicate_bismark on ${name}..."
+   deduplicate_bismark TODO
 done
 
 # %% Bismark methylation extraction
