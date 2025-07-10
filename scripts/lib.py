@@ -171,6 +171,7 @@ def volcano_plot(
     highlight_color=RED,
     fontsize=13,
     dotsize=25,
+    threshold=True,
 ):
     fig, ax = plt.subplots(1, 1, figsize=(4, 4))
 
@@ -244,9 +245,10 @@ def volcano_plot(
         fontsize=fontsize,
     )
 
-    ax.axvline(x=-L2FC_THRESHOLD, ls="--", lw=1, color="0.8")
-    ax.axvline(x=+L2FC_THRESHOLD, ls="--", lw=1, color="0.8")
-    ax.axhline(y=SCORE_THRESHOLD, ls="--", lw=1, color="0.8")
+    if threshold:
+        ax.axvline(x=-L2FC_THRESHOLD, ls="--", lw=1, color="0.8")
+        ax.axvline(x=+L2FC_THRESHOLD, ls="--", lw=1, color="0.8")
+        ax.axhline(y=SCORE_THRESHOLD, ls="--", lw=1, color="0.8")
 
     ax.spines[["top", "right"]].set_visible(False)
 

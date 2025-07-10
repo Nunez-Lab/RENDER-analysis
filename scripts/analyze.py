@@ -235,6 +235,7 @@ for cell_line, control, treatment, base in comparisons_iter():
         control_name=control_name,
         highlight=pl.col("external_gene_name") == targeted_genes[cell_line],
         gene_name_feature="external_gene_name",
+        threshold=False,
     )[0].save_organized(
         OUTPUT_DIR,
         "03-RNAseq-volcano",
