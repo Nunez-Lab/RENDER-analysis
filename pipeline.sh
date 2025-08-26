@@ -196,15 +196,6 @@ for name in "${EM_SAMPLE_NAMES[@]}"; do
       -2 $EM_OUTPUT_DIR/trimmed/${name}_R2.fastq.gz
 done
 
-# %% Bismark deduplication
-
-mkdir -p $EM_OUTPUT_DIR/aligned-deduplicated
-
-for name in "${EM_SAMPLE_NAMES[@]}"; do
-   echo "Running deduplicate_bismark on ${name}..."
-   deduplicate_bismark TODO
-done
-
 # %% Bismark methylation extraction
 
 mkdir -p $EM_OUTPUT_DIR/methylation

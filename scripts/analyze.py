@@ -3,6 +3,7 @@
 
 import importlib
 import os
+import sys
 
 import matplotlib.ticker as mtick
 import numpy as np
@@ -20,32 +21,20 @@ QUICK = True
 ################################################################################
 # %% Command-line arguments
 
-# METADATA_DIR = sys.argv[1]
-# GENE_METADATA_DIR = sys.argv[2]
-#
-# RNA_AGG_DIR = sys.argv[3]
-# RNA_TEST_DIR = sys.argv[4]
-#
-# EM_AVG_PATH = sys.argv[5]
-# EM_TEST_DIR = sys.argv[6]
-# EM_AGG_DIR = sys.argv[7]
-#
-# OUTPUT_DIR = sys.argv[8]
+METADATA_DIR = sys.argv[1]
+GENE_METADATA_DIR = sys.argv[2]
+
+RNA_AGG_DIR = sys.argv[3]
+RNA_TEST_DIR = sys.argv[4]
+
+EM_AVG_PATH = sys.argv[5]
+EM_TEST_DIR = sys.argv[6]
+EM_AGG_DIR = sys.argv[7]
+
+OUTPUT_DIR = sys.argv[8]
 
 ################################################################################
 # %% RNA-seq count plots
-
-METADATA_DIR = "metadata"
-GENE_METADATA_DIR = "output/gene-metadata"
-
-RNA_AGG_DIR = "output/RNAseq/aggregated-reads"
-RNA_TEST_DIR = "output/RNAseq/deseq2"
-
-EM_AVG_PATH = "output/EMseq/average-methylation-info/info.tsv"
-EM_TEST_DIR = "output/EMseq/dss"
-EM_AGG_DIR = "output/EMseq/dss-aggregated"
-
-OUTPUT_DIR = "output/analysis"
 
 # %% Load metadata
 
